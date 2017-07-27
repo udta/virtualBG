@@ -1,0 +1,241 @@
+<a href="#" id="b">Change BG</a>
+<a href="#pic" id="d">Change demo</a>
+<div class="wrapper">
+<canvas id="c" class="right"></canvas>
+<video autoplay class="center"></video>
+<canvas id='bg' class="left"></canvas>
+</div>
+
+<style>
+
+.wrapper {
+  display: grid;
+  grid-template-columns: 700px 700px 700px;
+  grid-template-rows: auto;
+}
+.left {
+  grid-area: 1 / 1 / 2 / 2;
+}
+.center {
+  grid-area: 1 / 2 / 2 / 3;
+}
+.left {
+  grid-area: 1 / 3 / 2 / 4;
+}
+</style>
+
+<script>
+    myStorage = window.localStorage;
+
+    if (!myStorage.getItem('imageDemo')) {
+        myStorage.setItem('imageDemo', true);
+    }
+
+    var imageDemo = myStorage.getItem('imageDemo') == "true"?true:false;
+
+    //Get Video
+    navigator.getUserMedia = navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia;
+
+
+    var B = document.getElementById('b');
+    var V = document.querySelector('video');
+    var bgC = document.getElementById('bg');
+    if (imageDemo == true) {
+        V.style.display = "none";
+        bgC.className = "center";
+    } else {
+		B.style.display = "none";
+    }
+
+    var C = document.getElementById('c');
+    var ctx = C.getContext('2d');
+
+    if ( imageDemo == true ) {
+        C.width = 700;
+        C.height = 446;
+    }
+
+   
+
+    bgC.width = C.width;
+    bgC.height = C.height;
+    var bgctx = bgC.getContext('2d');
+
+    var D = document.getElementById('d');
+    D.onclick = function(){
+        myStorage.setItem('imageDemo', !imageDemo);
+		location.reload();
+    }
+
+
+    var bg = new Image(); //background image
+    bg.onload = function() {
+
+        /// set size proportional to image
+        //bgC.height = bgC.width * (bg.height / bg.width);
+
+        /// step 1 - resize to 50%
+        var oc = document.createElement('canvas'),
+            octx = oc.getContext('2d');
+
+        oc.width = bg.width * 0.5;
+        oc.height = bg.height * 0.5;
+        octx.drawImage(bg, 0, 0, oc.width, oc.height);
+
+        /// step 2 - resize 50% of step 1
+        octx.drawImage(oc, 0, 0, oc.width * 0.5, oc.height * 0.5);
+
+        /// step 3, resize to final size
+        bgctx.drawImage(oc, 0, 0, oc.width * 0.5, oc.height * 0.5,
+                        0, 0, bgC.width, bgC.height);
+    }
+
+        if (imageDemo == false) {
+        navigator.getUserMedia( { audio: false, video: { width: 640, height: 480 } },
+                               function(stream) {
+                                   V.srcObject = stream;
+                                   V.addEventListener('loadedmetadata', function() {
+                                           C.width = V.videoWidth;
+                                           C.height = V.videoHeight;
+                                           bgC.width = C.width;
+                                           bgC.height = C.height;
+
+                                           //Create BG
+                                           bg.src = 'img/b.jpg';
+                                       });
+
+                                   V.addEventListener('play', function() {
+                                           var $this = this; //cache
+                                           (function loop() {
+                                               if (!$this.paused && !$this.ended) {
+                                                   ctx.drawImage($this, 0, 0);
+                                                   var imgData = ctx.getImageData(0, 0, C.width, C.height);
+                                                   var imgNew = bgctx.getImageData(0, 0, bgC.width, bgC.height);
+
+                                                   ctx.putImageData(replaceColorWithImg(imgData, 0, 0, { r: 200, g: 200, b: 200 }, C.width, C.height, imgNew), 0, 0);
+                                                   setTimeout(loop, 1000 / 500); // drawing at 30fps
+                                               }
+                                           })();
+                                       }, 0);
+                               },
+                               function(err) {
+                                   console.log("The following error occurred: " + err.name);
+                               });
+    }
+
+
+    if (imageDemo == true) {
+        bg.src = 'img/b.jpg';
+    }
+
+
+    if (imageDemo == true) {
+        img = new Image();
+
+        img.crossOrigin = 'anonymous'; // Try to remove/comment this line
+
+        img.src = 'img/a.png';
+
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0);
+            try {
+                var imgData = ctx.getImageData(0, 0, C.width, C.height);
+                var imgNew = bgctx.getImageData(0, 0, bgC.width, bgC.height);
+                B.onclick = function(e) {
+                    e.preventDefault();
+                    //applyFilter(ctx, imgData);
+
+                    //ctx.putImageData(replaceColor(imgData,0,0,{r:66,g:116,b:51},C.width,C.height,{r:99,g:44,b:55}),0,0);
+
+
+                    ctx.putImageData(replaceColorWithImg(imgData, 0, 0, { r: 66, g: 116, b: 51 }, C.width, C.height, imgNew), 0, 0);
+                };
+            } catch (err) {
+                //B.hide();
+                //$('body').append("Access denied");
+                console.log(err);
+            }
+        };
+
+    }
+    function applyFilter(ctx, data) {
+        for (var x = 0; x < data.width; x++) {
+            for (var y = 0; y < data.height; y++) {
+                var index = 4 * (y * data.width + x);
+                data.data[index] = data.data[index] - 50; //r
+                data.data[index + 1] = data.data[index + 1] - 50; //g
+                data.data[index + 2] = data.data[index + 2] - 50; //b
+                data.data[index + 3] = data.data[index + 2] - 50; //a
+            }
+        }
+        ctx.putImageData(data, 0, 0);
+    };
+    function replaceColor(imageData, x, y, sourceColor, w, h, replaceColor) {
+        //console.log("aaaaaa");
+        var x = x || 0,
+            y = y || 0,
+            w = x + w || imageData.width,
+            h = y + h || imageData.height;
+        if (x < 0 || y < 0 || w > imageData.width || h > imageData.height) {
+            throw new Error("error params!");
+        }
+        for (var j = y; j < h; j++) {
+            for (var i = x; i < w; i++) {
+                var index = j * imageData.width + i,
+                    r = imageData.data[4 * index],
+                    g = imageData.data[4 * index + 1],
+                    b = imageData.data[4 * index + 2];
+                if ((r < sourceColor.r * 1.8 && r > sourceColor.r * 0.7) &&
+                    (g > sourceColor.g * 0.7 && g < sourceColor.g * 1.8) && (b < sourceColor.b * 1.8 && b > sourceColor.b * 0.7)) {
+                    if (replaceColor) {
+                        imageData.data[4 * index] = replaceColor.r;
+                        imageData.data[4 * index + 1] = replaceColor.g;
+                        imageData.data[4 * index + 2] = replaceColor.b;
+                        imageData.data[4 * index + 3] = 255;
+                    } else {
+                        imageData.data[4 * index + 3] = 0;
+                    }
+                }
+            }
+        }
+        //console.log("nnnnnnnn");
+        return imageData;
+    }
+
+    function replaceColorWithImg(imageData, x, y, sourceColor, w, h, imgNew) {
+        //console.log("aaaaaa");
+        var x = x || 0,
+            y = y || 0,
+            w = x + w || imageData.width,
+            h = y + h || imageData.height;
+        if (x < 0 || y < 0 || w > imageData.width || h > imageData.height) {
+            throw new Error("error params!");
+        }
+        for (var j = y; j < h; j++) {
+            for (var i = x; i < w; i++) {
+                var index = j * imageData.width + i,
+                    r = imageData.data[4 * index],
+                    g = imageData.data[4 * index + 1],
+                    b = imageData.data[4 * index + 2];
+                if ((imageDemo == true && (g - r > 15) && (g - b > 20) && (g > 45 && g < 150)) ||
+                    (imageDemo == false && (r < sourceColor.r * 1.5 && r > sourceColor.r * 0.9) && (g > sourceColor.g * 0.9 && g < sourceColor.g * 1.5) && (b < sourceColor.b * 1.5 && b > sourceColor.b * 0.9))
+                   ) {
+                    if (imgNew.data) {
+                        imageData.data[4 * index] = imgNew.data[4 * index];
+                        imageData.data[4 * index + 1] = imgNew.data[4 * index + 1];
+                        imageData.data[4 * index + 2] = imgNew.data[4 * index + 2];
+                        imageData.data[4 * index + 3] = imgNew.data[4 * index + 3];
+                    } else {
+                        imageData.data[4 * index + 3] = 0;
+                    }
+                }
+            }
+        }
+        //console.log("nnnnnnnn");
+        return imageData;
+    }
+
+</script>
+
